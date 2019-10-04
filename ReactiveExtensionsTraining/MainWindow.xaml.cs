@@ -26,15 +26,7 @@
         {
             return Enumerable
                     .Range(1, 10)
-                    .Select(n =>
-                    {
-                        Thread.Sleep(250);
-
-                        //if (n == 5)
-                        //    throw new InvalidOperationException("Oops!");
-
-                        return (n, Thread.CurrentThread.ManagedThreadId);
-                    });
+                    .Select(n => (n, Thread.CurrentThread.ManagedThreadId));
         }
 
         private void PullButton_Click(object sender, RoutedEventArgs e)
@@ -55,19 +47,18 @@
             ItemsListBox.Items.Clear();
             ItemsListBox.Items.Add($"*** Observing Data on Thread {Thread.CurrentThread.ManagedThreadId} ***");
 
-            var numbersObs = _numbers.ToObservable();
+            var numbersObs = _numbers
+                .ToObservable()
+                .Select(tuple => $"{tuple.Number} on Thread {tuple.ThreadId}");
 
-            numbersObs
-                //.Where(tuple => tuple.Number % 2 == 0)
-                .Select(tuple => $"{tuple.Number} on Thread {tuple.ThreadId}")
-                //.SubscribeOn(NewThreadScheduler.Default)
-                //.ObserveOnDispatcher()
+            var intervalObs = Observable.Interval(TimeSpan.FromMilliseconds(200));
+
+            intervalObs.Zip(numbersObs, (l, r) => r)
+                .SubscribeOn(NewThreadScheduler.Default)
+                .ObserveOnDispatcher()
                 .Subscribe(
-                    n => ItemsListBox.Items.Add(n),
-                    //ex => ItemsListBox.Items.Add(ex.Message),
+                    text => ItemsListBox.Items.Add(text),
                     () => ItemsListBox.Items.Add("Completed!"));
-
-            //ItemsListBox.Items.Add("Completed!");
         }
     }
 }
